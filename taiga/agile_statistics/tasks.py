@@ -4,7 +4,7 @@ import taiga.agile_statistics.stats as stats
 
 
 @periodic_task(
-    run_every=(crontab(hour=10, minute=10)),
+    run_every=(crontab(hour=10, minute=30)),
     name="store_daily"
 )
 def store_daily():
@@ -12,7 +12,7 @@ def store_daily():
 
 
 @periodic_task(
-    run_every=(crontab(hour=10, minute=10)),
+    run_every=(crontab(hour=10, minute=30)),
     name="cfd"
 )
 def cfd():
