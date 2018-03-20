@@ -57,7 +57,7 @@ IGNORABLE_404_ENDS = (".php", ".cgi")
 IGNORABLE_404_STARTS = ("/phpmyadmin/",)
 
 ATOMIC_REQUESTS = True
-TIME_ZONE = "UTC"
+TIME_ZONE = 'Europe/Moscow'
 LOGIN_URL="/auth/login/"
 USE_TZ = True
 
@@ -204,6 +204,7 @@ STATIC_ROOT = os.path.join(BASE_DIR, "static")
 STATICFILES_FINDERS = [
     "django.contrib.staticfiles.finders.FileSystemFinder",
     "django.contrib.staticfiles.finders.AppDirectoriesFinder",
+    "django.contrib.staticfiles.finders.DefaultStorageFinder"
 ]
 
 STATICFILES_DIRS = (
@@ -319,6 +320,7 @@ INSTALLED_APPS = [
     "taiga.hooks.gogs",
     "taiga.webhooks",
     "taiga.importers",
+    "taiga.agile_statistics",
 
     "djmail",
     "django_jinja",

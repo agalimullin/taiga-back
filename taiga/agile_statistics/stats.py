@@ -298,7 +298,7 @@ def cmd_us_in_dep_format_dot(args):
     titles.sort()
     edges.sort()
 
-    file_name_base = DEPS_DOT_FILE_FMT.format(get_tag_str(tag))
+    file_name_base = DEPS_DOT_FILE_FMT.format(str(args['project_id']))
     file_name = file_name_base + ".dot"
     file_path = "{:s}/{:s}".format(CURRENT_DIR, file_name)
     try:
@@ -321,6 +321,10 @@ def cmd_us_in_dep_format_dot(args):
         return 1
 
     return 0
+
+
+def deps_gen(dataPath, snapshotPath):
+    os.system('unflatten -l1 -c5 ' + dataPath + ' | dot -T png -o ' + snapshotPath)
 
 
 def cmd_points_sum(args):
@@ -363,68 +367,208 @@ def cmd_points_sum(args):
         print("{:20s}\t{:.1f}".format(status_name, points_sum))
 
 
+def velocity_gen(args):
+    api = taiga.TaigaAPI(host=args['url'], token=args['auth_token'])
+    project = api.projects.get(args['project_id'])
+    project_milestones = reversed(project.list_milestones())
+    velocity = []  # sprints velocities
+
+    if project_milestones:
+        for milestone in project_milestones:
+            milestone = vars(milestone)
+            if milestone['closed_points']:
+                closed_points = velocity.append(milestone['closed_points'])
+            else:
+                closed_points = velocity.append(0)
+
+    N = len(velocity)
+
+    tableau20 = [(31, 119, 180), (174, 199, 232), (255, 127, 14), (255, 187, 120),
+                 (44, 160, 44), (152, 223, 138), (214, 39, 40), (255, 152, 150),
+                 (148, 103, 189), (197, 176, 213), (140, 86, 75), (196, 156, 148),
+                 (227, 119, 194), (247, 182, 210), (127, 127, 127), (199, 199, 199),
+                 (188, 189, 34), (219, 219, 141), (23, 190, 207), (158, 218, 229),
+                 (238, 99, 99)]
+
+    # Scale the RGB values to the [0, 1] range, which is the format matplotlib accepts.
+    for i in range(len(tableau20)):
+        r, g, b = tableau20[i]
+        tableau20[i] = (r / 255., g / 255., b / 255.)
+
+    fig = plt.figure(figsize=(12, 14))
+    ax = fig.add_subplot(111)
+    ax.spines["top"].set_visible(False)
+    ax.spines["bottom"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    ax.spines["left"].set_visible(False)
+
+    ax.get_xaxis().tick_bottom()
+    ax.get_yaxis().tick_left()
+
+
+    ## necessary variables
+    ind = numpy.arange(N)  # the x locations for the groups
+    width = 0.9  # the width of the bars
+
+    velocity_mean = [numpy.mean(velocity) for i in range(1, N)]
+
+    rects2 = ax.bar(ind + width, velocity, width, color=tableau20[20])
+
+    # axes and labels
+    plt.yticks(range(0, 45, 10), [str(x) for x in range(0, 45, 10)], fontsize=22)
+    plt.xticks(fontsize=22)
+    ax.set_xlim(width, len(ind) + width)
+    ax.set_ylim(0, 45)
+    ax.set_ylabel('Story Points', fontsize=22)
+    ax.set_xlabel('Iterations', fontsize=22)
+    # ax.set_title('Velocity for each Iteration')
+    xTickMarks = ['Iter- ' + str(i) for i in range(1, 10)]
+    ax.set_xticks(ind + width)
+    xtickNames = ax.set_xticklabels(xTickMarks)
+
+    mean_line = ax.plot(range(1, N), velocity_mean, label='Mean',
+                        linestyle='--', linewidth=3, color=tableau20[10])
+
+    plt.setp(xtickNames, rotation=45, fontsize=22)
+    legend = ax.legend(loc='upper right')
+
+    # сохраняем график в файл
+    out_file = MEDIA_ROOT + '/agile_stats_snapshots/velocity/velocity_project_%s.png' % str(args['project_id'])
+    plt.savefig(out_file)
+    print("velocity_{:s} generated at: {:s}".format('project_' + str(args['project_id']), out_file))
+
+
 def cmd_print_burnup_data(args):
     api = taiga.TaigaAPI(host=args['url'], token=args['auth_token'])
     project = api.projects.get(args['project_id'])
-    tag = args['tag']
-    status_ids = None
+    total_project_points = vars(project)['total_story_points']  # total project points
+    project_milestones = reversed(project.list_milestones())
+    totals = []  # data in sprints
 
-    status_ids, status_names = get_status_and_names_sorted(project)
-    selected_sids = None
-    if 'status_ids' in args and args['status_ids']:
-        selected_sids = [int(sid) for sid in args['status_ids'].split(',')]
-        selected_sids.reverse()
+    #toDo комменты добавить
+    if project_milestones:
+        previous_closed = 0
+        for milestone in project_milestones:
+            milestone = vars(milestone)
+            if milestone['closed_points']:
+                closed_points = milestone['closed_points']
+            else:
+                closed_points = 0
+            closed_points += previous_closed
+            totals.append({
+                'sprint_name': milestone['name'],
+                'sprint_start': milestone['estimated_start'],
+                'closed_points': closed_points
+            })
+            previous_closed += closed_points
+    # sprint names
+    x = []
+    # sprint full needed points
+    if not total_project_points:
+        total_points = [0] * len(totals)
     else:
-        selected_sids = status_ids
+        total_points = [total_project_points] * len(totals)
+    # sprint current points
+    completed_points = []
+    for total in totals:
+        x.append(total['sprint_start'])
+        # total_points.append(total['total_points'])
+        completed_points.append(total['closed_points'])
 
-    selected_snames = []
-    for sid in selected_sids:
-        try:
-            idx = status_ids.index(sid)
-        except ValueError:
-            print("Selected US status ID {:d} not found for project {:s}!".format(sid, project.name))
-            return 1
-        selected_snames.append(status_names[idx])
+    fig, ax = plt.subplots()
 
-    uss = get_stories_with_tag(project, tag)
+    # добавляем на грабик линии с total_points, completed_points
+    ax.plot(x, total_points, 'bs-')
+    ax.plot(x, completed_points, 'rs-')
 
-    selected_uss = []
-    for us in uss:
-        if us.status in selected_sids:
-            selected_uss.append(us)
+    # подписываем ось Y
+    plt.ylabel('Points')
+    # добавляем сетку на график
+    plt.grid()
+    # поворачиваем и устанавливаем подписи точек на оси X
+    plt.xticks(rotation=45)
 
-    nbr_done = 0
-    nbr_todo = 0
-    nbr_pts_done = 0
-    nbr_pts_todo = 0
-    total_pts = 0
-    for us in selected_uss:
-        pts = 0
-        if us.total_points:
-            pts = float(us.total_points)
-            total_pts += pts
+    # добавляем легенду
+    plt.plot(x, total_points, '-b', label='Total points')
+    plt.plot(x, completed_points, '-r', label='Completed points')
+    plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
 
-        if us.is_closed:
-            nbr_done += 1
-            nbr_pts_done += pts
-        else:
-            nbr_todo += 1
-            nbr_pts_todo += pts
+    # увеличиваем разрешение графика
+    fig.set_size_inches(21.5, 10.5)
 
-    snames_str = ", ".join(reversed(selected_snames))
-    tag_str = tag if tag != TAG_MATCH_ALL else "*"
-    print("Statuses: {:s}".format(snames_str))
-    print("Tag: {:s}".format(tag_str))
-    print("##### User Stories #####")
-    print("Total: {:d}".format(len(selected_uss)))
-    print("Done: {:d}".format(nbr_done))
-    print("TODO: {:d}".format(nbr_todo))
-    print("##### Points #####")
-    print("Total: {:.1f}".format(total_pts))
-    print("Done: {:.1f}".format(nbr_pts_done))
-    print("TODO: {:.1f}".format(nbr_pts_todo))
+    # подписываем каждую точку графика
+    for X, Y in zip(x, completed_points):
+        # если есть координата Y (completed sprint points)
+        if Y:
+            ax.annotate('{}'.format(Y), xy=(X, Y), xytext=(-5, 5), ha='right',
+                        textcoords='offset points')
+    # сохраняем график в файл
+    out_file = MEDIA_ROOT + '/agile_stats_snapshots/burnup/burnup_project_%s.png' % str(args['project_id'])
+    plt.savefig(out_file)
+    print("burnup_{:s} generated at: {:s}".format('project_' + str(args['project_id']), out_file))
 
-    return 0
+
+    # api = taiga.TaigaAPI(host=args['url'], token=args['auth_token'])
+    # project = api.projects.get(args['project_id'])
+    # tag = args['tag']
+    # status_ids = None
+    #
+    # status_ids, status_names = get_status_and_names_sorted(project)
+    # selected_sids = None
+    # if 'status_ids' in args and args['status_ids']:
+    #     selected_sids = [int(sid) for sid in args['status_ids'].split(',')]
+    #     selected_sids.reverse()
+    # else:
+    #     selected_sids = status_ids
+    #
+    # selected_snames = []
+    # for sid in selected_sids:
+    #     try:
+    #         idx = status_ids.index(sid)
+    #     except ValueError:
+    #         print("Selected US status ID {:d} not found for project {:s}!".format(sid, project.name))
+    #         return 1
+    #     selected_snames.append(status_names[idx])
+    #
+    # uss = get_stories_with_tag(project, tag)
+    #
+    # selected_uss = []
+    # for us in uss:
+    #     if us.status in selected_sids:
+    #         selected_uss.append(us)
+    #
+    # nbr_done = 0
+    # nbr_todo = 0
+    # nbr_pts_done = 0
+    # nbr_pts_todo = 0
+    # total_pts = 0
+    # for us in selected_uss:
+    #     pts = 0
+    #     if us.total_points:
+    #         pts = float(us.total_points)
+    #         total_pts += pts
+    #
+    #     if us.is_closed:
+    #         nbr_done += 1
+    #         nbr_pts_done += pts
+    #     else:
+    #         nbr_todo += 1
+    #         nbr_pts_todo += pts
+    #
+    # snames_str = ", ".join(reversed(selected_snames))
+    # tag_str = tag if tag != TAG_MATCH_ALL else "*"
+    # print("Statuses: {:s}".format(snames_str))
+    # print("Tag: {:s}".format(tag_str))
+    # print("##### User Stories #####")
+    # print("Total: {:d}".format(len(selected_uss)))
+    # print("Done: {:d}".format(nbr_done))
+    # print("TODO: {:d}".format(nbr_todo))
+    # print("##### Points #####")
+    # print("Total: {:.1f}".format(total_pts))
+    # print("Done: {:.1f}".format(nbr_pts_done))
+    # print("TODO: {:.1f}".format(nbr_pts_todo))
+    #
+    # return 0
 
 
 def cmd_store_daily_stats(args):
@@ -469,6 +613,7 @@ def cmd_store_daily_stats(args):
 def cmd_gen_cfd(args):
     api = taiga.TaigaAPI(host=args['url'], token=args['auth_token'])
     project_id = args['project_id']
+    project_name = args['project_name']
     project = api.projects.get(args['project_id'])
     tag = args['tag']
     output_path = args['output_path']
@@ -511,7 +656,7 @@ def cmd_gen_cfd(args):
     fig, ax = plt.subplots()
     fig.set_size_inches(w=20.0, h=10)
     tag_str = " for {:s}".format(tag) if tag != TAG_MATCH_ALL else ""
-    fig.suptitle("Cumulative Flow Diagram of {:s}".format('Project №' + str(project_id)))
+    fig.suptitle("Cumulative Flow Diagram of {:s}".format(str(project_name)))
     plt.xlabel('Week', fontsize=18)
     plt.ylabel('Number of USs', fontsize=16)
     polys = ax.stackplot(x, y)
@@ -650,10 +795,12 @@ def read_config():
 
 COMMAND2FUNC = {
     'burnup': cmd_print_burnup_data,
+    'velocity': velocity_gen,
     'cfd': cmd_gen_cfd,
     'config_template': cmd_gen_config_template,
     'deps_dot_nodes': cmd_print_us_in_dep_format,
     'deps_dot': cmd_us_in_dep_format_dot,
+    'deps_gen': deps_gen,
     'list_projects': cmd_list_projects,
     'list_us_statuses': cmd_list_us_statuses,
     'store_daily': cmd_store_daily_stats,
@@ -773,9 +920,33 @@ def main(args):
         args.pop('command')
         for elem in projects:
             id = vars(elem)['id']
+            name = vars(elem)['name']
             args['project_id'] = id
+            args['project_name'] = name
             command_func(args)
     elif args['command'] == 'deps_dot':
+        command_func = COMMAND2FUNC[args['command']]
+        args.pop('command')
+        for elem in projects:
+            id = vars(elem)['id']
+            args['project_id'] = id
+            command_func(args)
+    elif args['command'] == 'deps_gen':
+        command_func = COMMAND2FUNC[args['command']]
+        args.pop('command')
+        for elem in projects:
+            id = vars(elem)['id']
+            dataPath = './deps_dat/dependencies_%s.dot' % str(id)
+            if os.path.isfile(dataPath):
+                command_func(dataPath, MEDIA_ROOT + '/agile_stats_snapshots/dot/dependencies_project_%s.png' % str(id))
+    elif args['command'] == 'burnup':
+        command_func = COMMAND2FUNC[args['command']]
+        args.pop('command')
+        for elem in projects:
+            id = vars(elem)['id']
+            args['project_id'] = id
+            command_func(args)
+    elif args['command'] == 'velocity':
         command_func = COMMAND2FUNC[args['command']]
         args.pop('command')
         for elem in projects:
