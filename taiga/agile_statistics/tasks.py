@@ -3,8 +3,8 @@ from celery.schedules import crontab
 from celery.task import periodic_task
 import taiga.agile_statistics.stats as stats
 
-hour = 11
-minute = 44
+hour = 7
+minute = 4
 
 
 # генерация данных для Cumulative Flow Diagram
@@ -73,4 +73,9 @@ def velocity_gen():
     stats.main({'command': 'velocity'})
 
 
+# store_daily()
+# cfd()
+# deps_dot()
+# deps_gen()
+# burnup_gen()
 # velocity_gen()
