@@ -18,14 +18,18 @@
 
 from kombu import Queue
 
-broker_url = 'amqp://guest:guest@localhost:5672//'
-result_backend = 'redis://localhost:6379/0'
+# broker_url = 'amqp://taiga:taiga@localhost:5672/taiga'
+broker_url = 'redis://localhost:6379//'
+# result_backend = 'redis://localhost:6379'
+
 
 accept_content = ['pickle',] # Values are 'pickle', 'json', 'msgpack' and 'yaml'
 task_serializer = "pickle"
 result_serializer = "pickle"
 
-timezone = 'Europe/Madrid'
+# почему параметры не учитываются?
+CELERY_ENABLE_UTC = False
+timezone = 'Europe/Moscow'
 
 task_default_queue = 'tasks'
 task_queues = (

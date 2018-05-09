@@ -19,8 +19,12 @@ from settings import MEDIA_ROOT
 
 ################# Constants #####################
 CURRENT_DIR = os.path.dirname(os.path.realpath(__file__))  # разобраться
-CFD_DATA_FILE_FMT = 'cfd_dat/cfd_{:s}.dat'
-CFD_OUT_PNG_FMT = MEDIA_ROOT + '/agile_stats_snapshots/cfd/cfd_{:s}.png'
+NOW = dt.datetime.now()
+CURRENT_DATE_FULL = str(NOW.day) + '_' + str(NOW.month) + '_' + str(NOW.year)
+YESTERDAY = NOW - dt.timedelta(days=1)
+YESTERDAY_CFD_PATH = "{:s}/{:s}".format(CURRENT_DIR,  'cfd_dat/' + str(YESTERDAY.day) + '_' + str(YESTERDAY.month) + '_' + str(YESTERDAY.year))
+CFD_DATA_FILE_FMT = 'cfd_dat/{:s}/cfd_{:s}.dat'
+CFD_OUT_PNG_FMT = MEDIA_ROOT + '/agile_stats_snapshots/cfd/{:s}/cfd_{:s}.png'
 NO_ANNOTATION = 'NONE'
 TAG_MATCH_ALL = '*'
 CUST_ATTRIB_DEPENDSON_NAME = 'Depends On'
@@ -119,7 +123,7 @@ def get_dot_footer():
 
 
 def read_daily_cfd(path, tag, project_id):
-    data_file = CFD_DATA_FILE_FMT.format('project_' + str(project_id))
+    data_file = CFD_DATA_FILE_FMT.format(CURRENT_DATE_FULL, 'project_' + str(project_id))
     data_path = "{:s}/{:s}".format(CURRENT_DIR, data_file)
     data = []
     try:
@@ -433,7 +437,9 @@ def velocity_gen(args):
     legend = ax.legend(loc='upper right')
 
     # сохраняем график в файл
-    out_file = MEDIA_ROOT + '/agile_stats_snapshots/velocity/velocity_project_%s.png' % str(args['project_id'])
+    if not os.path.isdir(MEDIA_ROOT + '/agile_stats_snapshots/velocity/' + CURRENT_DATE_FULL):
+        os.makedirs(MEDIA_ROOT + '/agile_stats_snapshots/velocity/' + CURRENT_DATE_FULL)
+    out_file = MEDIA_ROOT + '/agile_stats_snapshots/velocity/' + CURRENT_DATE_FULL + '/velocity_project_%s.png' % str(args['project_id'])
     plt.savefig(out_file)
     print("velocity_{:s} generated at: {:s}".format('project_' + str(args['project_id']), out_file))
 
@@ -441,6 +447,7 @@ def velocity_gen(args):
 def cmd_print_burnup_data(args):
     api = taiga.TaigaAPI(host=args['url'], token=args['auth_token'])
     project = api.projects.get(args['project_id'])
+    project_name = args['project_name']
     total_project_points = vars(project)['total_story_points']  # total project points
     project_milestones = reversed(project.list_milestones())
     totals = []  # data in sprints
@@ -477,6 +484,8 @@ def cmd_print_burnup_data(args):
 
     fig, ax = plt.subplots()
 
+    fig.suptitle("Burnup chart of {:s}".format(str(project_name)))
+
     # добавляем на грабик линии с total_points, completed_points
     ax.plot(x, total_points, 'bs-')
     ax.plot(x, completed_points, 'rs-')
@@ -503,72 +512,11 @@ def cmd_print_burnup_data(args):
             ax.annotate('{}'.format(Y), xy=(X, Y), xytext=(-5, 5), ha='right',
                         textcoords='offset points')
     # сохраняем график в файл
-    out_file = MEDIA_ROOT + '/agile_stats_snapshots/burnup/burnup_project_%s.png' % str(args['project_id'])
+    if not os.path.isdir(MEDIA_ROOT + '/agile_stats_snapshots/burnup/' + CURRENT_DATE_FULL):
+        os.makedirs(MEDIA_ROOT + '/agile_stats_snapshots/burnup/' + CURRENT_DATE_FULL)
+    out_file = MEDIA_ROOT + '/agile_stats_snapshots/burnup/' + CURRENT_DATE_FULL + '/burnup_project_%s.png' % str(args['project_id'])
     plt.savefig(out_file)
     print("burnup_{:s} generated at: {:s}".format('project_' + str(args['project_id']), out_file))
-
-
-    # api = taiga.TaigaAPI(host=args['url'], token=args['auth_token'])
-    # project = api.projects.get(args['project_id'])
-    # tag = args['tag']
-    # status_ids = None
-    #
-    # status_ids, status_names = get_status_and_names_sorted(project)
-    # selected_sids = None
-    # if 'status_ids' in args and args['status_ids']:
-    #     selected_sids = [int(sid) for sid in args['status_ids'].split(',')]
-    #     selected_sids.reverse()
-    # else:
-    #     selected_sids = status_ids
-    #
-    # selected_snames = []
-    # for sid in selected_sids:
-    #     try:
-    #         idx = status_ids.index(sid)
-    #     except ValueError:
-    #         print("Selected US status ID {:d} not found for project {:s}!".format(sid, project.name))
-    #         return 1
-    #     selected_snames.append(status_names[idx])
-    #
-    # uss = get_stories_with_tag(project, tag)
-    #
-    # selected_uss = []
-    # for us in uss:
-    #     if us.status in selected_sids:
-    #         selected_uss.append(us)
-    #
-    # nbr_done = 0
-    # nbr_todo = 0
-    # nbr_pts_done = 0
-    # nbr_pts_todo = 0
-    # total_pts = 0
-    # for us in selected_uss:
-    #     pts = 0
-    #     if us.total_points:
-    #         pts = float(us.total_points)
-    #         total_pts += pts
-    #
-    #     if us.is_closed:
-    #         nbr_done += 1
-    #         nbr_pts_done += pts
-    #     else:
-    #         nbr_todo += 1
-    #         nbr_pts_todo += pts
-    #
-    # snames_str = ", ".join(reversed(selected_snames))
-    # tag_str = tag if tag != TAG_MATCH_ALL else "*"
-    # print("Statuses: {:s}".format(snames_str))
-    # print("Tag: {:s}".format(tag_str))
-    # print("##### User Stories #####")
-    # print("Total: {:d}".format(len(selected_uss)))
-    # print("Done: {:d}".format(nbr_done))
-    # print("TODO: {:d}".format(nbr_todo))
-    # print("##### Points #####")
-    # print("Total: {:.1f}".format(total_pts))
-    # print("Done: {:.1f}".format(nbr_pts_done))
-    # print("TODO: {:.1f}".format(nbr_pts_todo))
-    #
-    # return 0
 
 
 def cmd_store_daily_stats(args):
@@ -584,16 +532,24 @@ def cmd_store_daily_stats(args):
     for us in uss:
         us_by_status[us.status].append(us)
 
-    data_file = CFD_DATA_FILE_FMT.format('project_' + str(project_id))
+    if not os.path.isdir(CURRENT_DIR + '/cfd_dat/' + CURRENT_DATE_FULL):
+        os.makedirs(CURRENT_DIR + '/cfd_dat/' + CURRENT_DATE_FULL)
+    data_file = CFD_DATA_FILE_FMT.format(CURRENT_DATE_FULL, 'project_' + str(project_id))
     data_path = "{:s}/{:s}".format(CURRENT_DIR, data_file)
     if not os.path.isfile(data_path):
         with open(data_path, 'w') as fdata:
-            fdata.write("#date")
-            fdata.write("\tannotation")
-            fdata.write("\tannotation_layer")
-            for status_id in status_ids:
-                fdata.write("\t{:s}".format(get_us_status_name_from_id(project, status_id)))
-            fdata.write("\n")
+            output = ''
+            if os.path.exists(YESTERDAY_CFD_PATH):
+                with open(YESTERDAY_CFD_PATH + '/cfd_project_' + str(project_id) + '.dat', 'r') as f:
+                    output = f.read()
+                fdata.write(output)
+            else:
+                fdata.write("#date")
+                fdata.write("\tannotation")
+                fdata.write("\tannotation_layer")
+                for status_id in status_ids:
+                    fdata.write("\t{:s}".format(get_us_status_name_from_id(project, status_id)))
+                fdata.write("\n")
 
     with open(data_path, 'a') as fdata:
         fdata.write("{:s}".format(dt.datetime.utcnow().strftime("%Y-%m-%d")))
@@ -736,7 +692,9 @@ def cmd_gen_cfd(args):
     ax.legend(reversed(legendProxies), reversed(selected_snames), title="Color chart", loc='center left',
               bbox_to_anchor=(1, 0.5))
 
-    out_file = CFD_OUT_PNG_FMT.format('project_' + str(project_id))
+    if not os.path.isdir(MEDIA_ROOT + '/agile_stats_snapshots/cfd/' + CURRENT_DATE_FULL):
+        os.makedirs(MEDIA_ROOT + '/agile_stats_snapshots/cfd/' + CURRENT_DATE_FULL)
+    out_file = CFD_OUT_PNG_FMT.format(CURRENT_DATE_FULL, 'project_' + str(project_id))
     # out_path = "{:s}/{:s}".format(output_path, out_file)
     plt.savefig(out_file)
 
@@ -944,7 +902,9 @@ def main(args):
         args.pop('command')
         for elem in projects:
             id = vars(elem)['id']
+            name = vars(elem)['name']
             args['project_id'] = id
+            args['project_name'] = name
             command_func(args)
     elif args['command'] == 'velocity':
         command_func = COMMAND2FUNC[args['command']]
