@@ -31,7 +31,8 @@ def calculate_milestone_is_closed(milestone):
 def close_milestone(milestone):
     if not milestone.closed:
         milestone.closed = True
-        milestone.save(update_fields=["closed",])
+        milestone.finish_date = timezone.now()
+        milestone.save(update_fields=["closed", "finish_date"])
 
 
 def open_milestone(milestone):

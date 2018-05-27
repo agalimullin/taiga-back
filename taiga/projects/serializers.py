@@ -15,6 +15,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+import random
 
 from django.utils.translation import ugettext as _
 
@@ -268,6 +269,33 @@ class ProjectSerializer(serializers.LightSerializer):
 
     is_fan = Field(attr="is_fan_attr")
 
+    lalala = MethodField(attr="lalala_attr")
+    percentage = MethodField(attr="percentage_attr")
+
+    def get_percentage(self, obj):
+        return random.randint(0, 65)
+
+    def get_milestones(self, obj):
+        pass
+        # assert hasattr(obj, "milestones_attr"), "instance must have a members_attr attribute"
+        # if obj.milestones_attr is None:
+        #     return []
+        # return obj.milestones_attr
+
+    def get_lalala(self, obj):
+        # print(vars(obj)['_prefetched_objects_cache']['milestones'])
+        # print(vars(obj.milestones.all())['_result_cache'])
+        closed_points = {}
+        for elem in vars(obj.milestones.all())['_result_cache']:
+            closed_points[vars(elem)['name']] = vars(elem)['closed_points_attr']
+
+        if len(closed_points) > 0:
+            sum = 0
+            for key, elem in closed_points.items():
+                if elem is not None:
+                    sum += elem
+            return sum / len(closed_points)
+
     def get_members(self, obj):
         assert hasattr(obj, "members_attr"), "instance must have a members_attr attribute"
         if obj.members_attr is None:
@@ -385,7 +413,6 @@ class ProjectDetailSerializer(ProjectSerializer):
         assert hasattr(obj, "milestones_attr"), "instance must have a milestones_attr attribute"
         if obj.milestones_attr is None:
             return []
-
         return obj.milestones_attr
 
     def to_value(self, instance):

@@ -35,6 +35,7 @@ class MilestoneSerializer(WatchedResourceSerializer,
     estimated_finish = Field()
     created_date = Field()
     modified_date = Field()
+    finish_date = Field()
     closed = Field()
     disponibility = Field()
     order = Field()

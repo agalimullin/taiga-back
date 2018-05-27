@@ -20,7 +20,6 @@ from __future__ import absolute_import, print_function
 import os, sys
 
 from .celery import *
-
 try:
     print("Trying import local.py settings...", file=sys.stderr)
     from .local import *

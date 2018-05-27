@@ -49,6 +49,8 @@ class Milestone(WatchedModelMixin, models.Model):
                                         default=timezone.now)
     modified_date = models.DateTimeField(null=False, blank=False,
                                          verbose_name=_("modified date"))
+    finish_date = models.DateTimeField(null=True, blank=True,
+                                       verbose_name=_("finish date"))
     closed = models.BooleanField(default=False, null=False, blank=True,
                                  verbose_name=_("is closed"))
     disponibility = models.FloatField(default=0.0, null=True, blank=True,
@@ -88,7 +90,7 @@ class Milestone(WatchedModelMixin, models.Model):
     @cached_property
     def cached_user_stories(self):
         return (self.user_stories.prefetch_related("role_points", "role_points__points")
-                                 .annotate(num_tasks=Count("tasks")))
+                .annotate(num_tasks=Count("tasks")))
 
     def _get_user_stories_points(self, user_stories):
         role_points = [us.role_points.all() for us in user_stories]
@@ -119,9 +121,9 @@ class Milestone(WatchedModelMixin, models.Model):
                 us._total_us_points = sum(self._get_user_stories_points([us]).values())
                 user_stories[us.id] = us
 
-            tasks = self.tasks.\
-                select_related("user_story").\
-                exclude(finished_date__isnull=True).\
+            tasks = self.tasks. \
+                select_related("user_story"). \
+                exclude(finished_date__isnull=True). \
                 exclude(user_story__isnull=True)
 
             # For each finished task we try to know the proporional part of points
@@ -158,7 +160,6 @@ class Milestone(WatchedModelMixin, models.Model):
                 points_by_date = self._total_closed_points_by_date.get(finished_date, 0)
                 points_by_date += us._total_us_points
                 self._total_closed_points_by_date[finished_date] = points_by_date
-
 
             # At this point self._total_closed_points_by_date keeps a dict where the
             # finished date of the task is the key and the value is the increment of points
