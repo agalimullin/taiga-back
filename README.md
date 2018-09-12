@@ -6,7 +6,8 @@
 
 Инструкция по развертыванию backend части приложения на локальной машине имеется на официальном сайте: https://taigaio.github.io/taiga-doc/dist/setup-development.html
 
-## Ссылка на исходный код в явном виде (в виде архива): ## https://drive.google.com/drive/folders/153D3SmK85vpBvTetKAG7sN4nShKBBg16
+## Ссылка на исходный код в явном виде (в виде архива): ## 
+URL: https://drive.google.com/drive/folders/153D3SmK85vpBvTetKAG7sN4nShKBBg16
 
 #### В продукт были внедрены новые компоненты (в перечислении front+back компоненты): ####
 
