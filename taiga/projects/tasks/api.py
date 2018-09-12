@@ -51,6 +51,7 @@ class TaskViewSet(OCCResourceMixin, VotedResourceMixin, HistoryResourceMixin, Wa
     queryset = models.Task.objects.all()
     permission_classes = (permissions.TaskPermission,)
     filter_backends = (filters.CanViewTasksFilterBackend,
+                       filters.RoleFilter,
                        filters.OwnersFilter,
                        filters.AssignedToFilter,
                        filters.StatusesFilter,
@@ -67,6 +68,14 @@ class TaskViewSet(OCCResourceMixin, VotedResourceMixin, HistoryResourceMixin, Wa
                      "project",
                      "project__slug",
                      "status__is_closed"]
+    order_by_fields = ("project",
+                       "milestone",
+                       "status",
+                       "created_date",
+                       "modified_date",
+                       "assigned_to",
+                       "subject",
+                       "total_voters")
 
     def get_serializer_class(self, *args, **kwargs):
         if self.action in ["retrieve", "by_ref"]:
@@ -211,13 +220,15 @@ class TaskViewSet(OCCResourceMixin, VotedResourceMixin, HistoryResourceMixin, Wa
         statuses_filter_backends = (f for f in filter_backends if f != filters.StatusesFilter)
         assigned_to_filter_backends = (f for f in filter_backends if f != filters.AssignedToFilter)
         owners_filter_backends = (f for f in filter_backends if f != filters.OwnersFilter)
+        roles_filter_backends = (f for f in filter_backends if f != filters.RoleFilter)
 
         queryset = self.get_queryset()
         querysets = {
             "statuses": self.filter_queryset(queryset, filter_backends=statuses_filter_backends),
             "assigned_to": self.filter_queryset(queryset, filter_backends=assigned_to_filter_backends),
             "owners": self.filter_queryset(queryset, filter_backends=owners_filter_backends),
-            "tags": self.filter_queryset(queryset)
+            "tags": self.filter_queryset(queryset),
+            "roles": self.filter_queryset(queryset, filter_backends=roles_filter_backends),
         }
         return response.Ok(services.get_tasks_filters_data(project, querysets))
 

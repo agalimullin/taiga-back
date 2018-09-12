@@ -24,12 +24,17 @@ from django.utils import timezone
 from django.core.exceptions import ValidationError
 from django.utils.functional import cached_property
 
+from taiga.base.utils.files import get_file_path
 from taiga.base.utils.slug import slugify_uniquely
 from taiga.base.utils.dicts import dict_sum
 from taiga.projects.notifications.mixins import WatchedModelMixin
 
 import itertools
 import datetime
+
+
+def get_milestone_file_path(instance, filename):
+    return get_file_path(instance, filename, "milestone")
 
 
 class Milestone(WatchedModelMixin, models.Model):
@@ -49,12 +54,17 @@ class Milestone(WatchedModelMixin, models.Model):
                                         default=timezone.now)
     modified_date = models.DateTimeField(null=False, blank=False,
                                          verbose_name=_("modified date"))
+    finish_date = models.DateTimeField(null=True, blank=True,
+                                       verbose_name=_("finish date"))
     closed = models.BooleanField(default=False, null=False, blank=True,
                                  verbose_name=_("is closed"))
     disponibility = models.FloatField(default=0.0, null=True, blank=True,
                                       verbose_name=_("disponibility"))
     order = models.PositiveSmallIntegerField(default=1, null=False, blank=False,
                                              verbose_name=_("order"))
+    burndown_forecast_image = models.FileField(upload_to=get_milestone_file_path,
+                                               max_length=500, null=True, blank=True,
+                                               verbose_name=_("burndown forecast image"))
     _importing = None
     _total_closed_points_by_date = None
 
@@ -88,7 +98,7 @@ class Milestone(WatchedModelMixin, models.Model):
     @cached_property
     def cached_user_stories(self):
         return (self.user_stories.prefetch_related("role_points", "role_points__points")
-                                 .annotate(num_tasks=Count("tasks")))
+                .annotate(num_tasks=Count("tasks")))
 
     def _get_user_stories_points(self, user_stories):
         role_points = [us.role_points.all() for us in user_stories]
@@ -119,9 +129,9 @@ class Milestone(WatchedModelMixin, models.Model):
                 us._total_us_points = sum(self._get_user_stories_points([us]).values())
                 user_stories[us.id] = us
 
-            tasks = self.tasks.\
-                select_related("user_story").\
-                exclude(finished_date__isnull=True).\
+            tasks = self.tasks. \
+                select_related("user_story"). \
+                exclude(finished_date__isnull=True). \
                 exclude(user_story__isnull=True)
 
             # For each finished task we try to know the proporional part of points
@@ -147,6 +157,16 @@ class Milestone(WatchedModelMixin, models.Model):
                 if us_tasks_counter != 0:
                     points_by_date += total_us_points / us_tasks_counter
 
+                self._total_closed_points_by_date[finished_date] = points_by_date
+
+            for us in self.cached_user_stories:
+                if us.num_tasks > 0 or us.finish_date is None:
+                    continue
+                finished_date = us.finish_date.date()
+                if finished_date < self.estimated_start:
+                    finished_date = self.estimated_start
+                points_by_date = self._total_closed_points_by_date.get(finished_date, 0)
+                points_by_date += us._total_us_points
                 self._total_closed_points_by_date[finished_date] = points_by_date
 
             # At this point self._total_closed_points_by_date keeps a dict where the

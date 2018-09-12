@@ -121,8 +121,9 @@ def tasks_to_csv(project, queryset):
     fieldnames = ["ref", "subject", "description", "user_story", "sprint", "sprint_estimated_start",
                   "sprint_estimated_finish", "owner", "owner_full_name", "assigned_to",
                   "assigned_to_full_name", "status", "is_iocaine", "is_closed", "us_order",
-                  "taskboard_order", "attachments", "external_reference", "tags", "watchers", "voters",
-                  "created_date", "modified_date", "finished_date"]
+                  "taskboard_order", "attachments", "external_reference", "tags", "watchers",
+                  "voters", "created_date", "modified_date", "finished_date", "due_date",
+                  "due_date_reason"]
 
     custom_attrs = project.taskcustomattributes.all()
     for custom_attr in custom_attrs:
@@ -167,6 +168,8 @@ def tasks_to_csv(project, queryset):
             "created_date": task.created_date,
             "modified_date": task.modified_date,
             "finished_date": task.finished_date,
+            "due_date": task.due_date,
+            "due_date_reason": task.due_date_reason,
         }
         for custom_attr in custom_attrs:
             value = task.custom_attributes_values.attributes_values.get(str(custom_attr.id), None)
@@ -279,6 +282,58 @@ def _get_tasks_assigned_to(project, queryset):
     return sorted(result, key=itemgetter("full_name"))
 
 
+def _get_tasks_roles(project, queryset):
+    compiler = connection.ops.compiler(queryset.query.compiler)(queryset.query, connection, None)
+    queryset_where_tuple = queryset.query.where.as_sql(compiler, connection)
+    where = queryset_where_tuple[0]
+    where_params = queryset_where_tuple[1]
+
+    extra_sql = """
+     WITH "task_counters" AS (
+         SELECT DISTINCT "tasks_task"."status_id" "status_id",
+                         "tasks_task"."id" "us_id",
+                         "projects_membership"."role_id" "role_id"
+                    FROM "tasks_task"
+              INNER JOIN "projects_project"
+                      ON ("tasks_task"."project_id" = "projects_project"."id")
+         LEFT OUTER JOIN "projects_membership"
+                      ON "projects_membership"."user_id" = "tasks_task"."assigned_to_id"
+                   WHERE {where}
+            ),
+             "counters" AS (
+                  SELECT "role_id" as "role_id",
+                         COUNT("role_id") "count"
+                    FROM "task_counters"
+                GROUP BY "role_id"
+            )
+
+                 SELECT "users_role"."id",
+                        "users_role"."name",
+                        "users_role"."order",
+                        COALESCE("counters"."count", 0)
+                   FROM "users_role"
+        LEFT OUTER JOIN "counters"
+                     ON "counters"."role_id" = "users_role"."id"
+                  WHERE "users_role"."project_id" = %s
+               ORDER BY "users_role"."order";
+    """.format(where=where)
+
+    with closing(connection.cursor()) as cursor:
+        cursor.execute(extra_sql, where_params + [project.id])
+        rows = cursor.fetchall()
+
+    result = []
+    for id, name, order, count in rows:
+        result.append({
+            "id": id,
+            "name": _(name),
+            "color": None,
+            "order": order,
+            "count": count,
+        })
+    return sorted(result, key=itemgetter("order"))
+
+
 def _get_tasks_owners(project, queryset):
     compiler = connection.ops.compiler(queryset.query.compiler)(queryset.query, connection, None)
     queryset_where_tuple = queryset.query.where.as_sql(compiler, connection)
@@ -384,6 +439,7 @@ def get_tasks_filters_data(project, querysets):
         ("assigned_to", _get_tasks_assigned_to(project, querysets["assigned_to"])),
         ("owners", _get_tasks_owners(project, querysets["owners"])),
         ("tags", _get_tasks_tags(project, querysets["tags"])),
+        ("roles", _get_tasks_roles(project, querysets["roles"])),
     ])
 
     return data

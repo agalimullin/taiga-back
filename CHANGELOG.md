@@ -1,4 +1,78 @@
-# Changelog #
+# Changelog
+
+## Unreleased
+
+## 3.3.4 (2018-05-24)
+
+### Misc
+
+- Add features to fulfill GDPR.
+
+## 3.3.3 (2018-05-10)
+
+### Misc
+
+- Update locales.
+- Minor bug fixes.
+
+## 3.3.1 (2018-04-30)
+
+### Misc
+
+- Minor bug fixes.
+
+## 3.3.1 (2018-04-30)
+
+### Misc
+
+- Minor bug fixes.
+
+## 3.3.0 Picea mariana (2018-04-26)
+
+### Features
+
+- Add "live notifications" to Taiga:
+    - Migration for user configuration.
+- Add due date to US, tasks and issues (https://tree.taiga.io/project/taiga/issue/3070):
+    - Add to csv export.
+    - Add to projects import/export.
+    - Add to webhooks.
+    - Add to django admin.
+- Add multiple assignement only in US (https://tree.taiga.io/project/taiga/issue/1961):
+    - The `assigned_to` field is still active.
+    - Add to csv export.
+    - Add to projects import/export.
+    - Add to webhooks.
+    - Add to django admin.
+- Delete cards in Kanban and sprint Taskboard (https://tree.taiga.io/project/taiga/issue/2683).
+
+## 3.2.3 (2018-04-04)
+
+### Misc
+
+- Fix milestone burndown graph with empty US.
+- Upgrade markdown library to solve bug.
+- Update locales.
+
+## 3.2.2 (2018-03-15)
+
+### Misc
+
+- Minor bug fixes.
+
+
+## 3.2.0 Betula nana (2018-03-07)
+
+### Features
+- Add role filtering in US.
+
+
+## 3.1.3 (2018-02-28)
+
+### Features
+- Increase token entropy.
+- Squash field changes on notification emails
+- Minor bug fixes.
 
 
 ## 3.1.0 Perovskia Atriplicifolia (2017-03-10)

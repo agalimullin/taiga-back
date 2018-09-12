@@ -32,6 +32,30 @@ from taiga.base.utils.db import to_tsquery
 logger = logging.getLogger(__name__)
 
 
+def get_filter_expression_can_view_projects(user, project_id=None):
+    # Filter by user permissions
+    if user.is_authenticated() and user.is_superuser:
+        return Q()
+    elif user.is_authenticated():
+        # authenticated user & project member
+        membership_model = apps.get_model("projects", "Membership")
+        memberships_qs = membership_model.objects.filter(user=user)
+        if project_id:
+            memberships_qs = memberships_qs.filter(project_id=project_id)
+        memberships_qs = memberships_qs.filter(
+            Q(role__permissions__contains=['view_project']) |
+            Q(is_admin=True))
+
+        projects_list = [membership.project_id for membership in
+                         memberships_qs]
+
+        return (Q(id__in=projects_list) |
+                Q(public_permissions__contains=["view_project"]))
+    else:
+        # external users / anonymous
+        return Q(anon_permissions__contains=["view_project"])
+
+
 #####################################################################
 # Base and Mixins
 #####################################################################
@@ -396,6 +420,33 @@ class AssignedToFilter(BaseRelatedFieldsFilter):
     filter_name = 'assigned_to'
 
 
+class AssignedUsersFilter(BaseRelatedFieldsFilter):
+    filter_name = 'assigned_users'
+
+    def get_lookup_expression(self, field_name, value):
+        if None in value:
+            qs_in_kwargs = {
+                "{}__in".format(field_name): [v for v in value if
+                                                    v is not None]}
+            qs_isnull_kwargs = {"{}__isnull".format(field_name): True}
+            return Q(**qs_in_kwargs) | Q(**qs_isnull_kwargs)
+        else:
+            return Q(**{"{}__in".format(field_name): value})
+
+    def _get_queryparams(self, params):
+        param_name = self.param_name or self.filter_name
+        raw_value = params.get(param_name, None)
+
+        if raw_value:
+            value = self._prepare_filter_data(raw_value)
+            assigned_user_filter = self.get_lookup_expression(param_name, value)
+            assigned_to_filter = self.get_lookup_expression('assigned_to', value)
+
+            return Q(assigned_user_filter | assigned_to_filter)
+
+        return None
+
+
 class StatusesFilter(BaseRelatedFieldsFilter):
     filter_name = 'status'
 
@@ -563,3 +614,22 @@ class QFilter(FilterBackend):
             queryset = queryset.extra(where=[where_clause], params=[to_tsquery(q)])
 
         return queryset
+
+
+class RoleFilter(BaseRelatedFieldsFilter):
+    filter_name = "role_id"
+    param_name = "role"
+
+    def filter_queryset(self, request, queryset, view):
+        Membership = apps.get_model('projects', 'Membership')
+        query = self._get_queryparams(request.QUERY_PARAMS)
+        if query:
+            if isinstance(query, dict):
+                memberships = Membership.objects.filter(**query).values_list("user_id", flat=True)
+                queryset = queryset.filter(assigned_to__in=memberships)
+            else:
+                memberships = Membership.objects.filter(query).values_list("user_id", flat=True)
+            if memberships:
+                queryset = queryset.filter(assigned_to__in=memberships)
+
+        return FilterBackend.filter_queryset(self, request, queryset, view)

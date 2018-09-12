@@ -188,6 +188,8 @@ class UserFactory(Factory):
     username = factory.Sequence(lambda n: "user{}".format(n))
     email = factory.LazyAttribute(lambda obj: '%s@email.com' % obj.username)
     password = factory.PostGeneration(lambda obj, *args, **kwargs: obj.set_password(obj.username))
+    accepted_terms = True
+    read_new_terms = True
 
 
 class MembershipFactory(Factory):
@@ -292,6 +294,17 @@ class UserStoryFactory(Factory):
     status = factory.SubFactory("tests.factories.UserStoryStatusFactory")
     milestone = factory.SubFactory("tests.factories.MilestoneFactory")
     tags = factory.Faker("words")
+    due_date = factory.LazyAttribute(lambda o: date.today() + timedelta(days=7))
+    due_date_reason = factory.Faker("words")
+
+    @factory.post_generation
+    def assigned_users(self, create, users_list, **kwargs):
+        if not create:
+            return
+
+        if users_list:
+            for user in users_list:
+                self.assigned_users.add(user)
 
 
 class TaskFactory(Factory):
@@ -308,6 +321,8 @@ class TaskFactory(Factory):
     milestone = factory.SubFactory("tests.factories.MilestoneFactory")
     user_story = factory.SubFactory("tests.factories.UserStoryFactory")
     tags = factory.Faker("words")
+    due_date = factory.LazyAttribute(lambda o: date.today() + timedelta(days=7))
+    due_date_reason = factory.Faker("words")
 
 
 class IssueFactory(Factory):
@@ -326,6 +341,8 @@ class IssueFactory(Factory):
     type = factory.SubFactory("tests.factories.IssueTypeFactory")
     milestone = factory.SubFactory("tests.factories.MilestoneFactory")
     tags = factory.Faker("words")
+    due_date = factory.LazyAttribute(lambda o: date.today() + timedelta(days=7))
+    due_date_reason = factory.Faker("words")
 
 
 class WikiPageFactory(Factory):

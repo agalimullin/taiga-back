@@ -19,6 +19,8 @@ from taiga.base import routers
 
 from . import api
 
+from . import services
+
 
 router = routers.DefaultRouter(trailing_slash=False)
 
@@ -26,3 +28,5 @@ if settings.STATS_ENABLED:
     router.register(r"stats/system", api.SystemStatsViewSet, base_name="system-stats")
 
 router.register(r"stats/discover", api.DiscoverStatsViewSet, base_name="discover-stats")
+
+router.register(r"stats/agile_stats_export/$", api.AgileStatsExportViewSet, base_name="agile_stats_export")

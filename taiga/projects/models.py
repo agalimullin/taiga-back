@@ -61,6 +61,10 @@ def get_project_logo_file_path(instance, filename):
     return get_file_path(instance, filename, "project")
 
 
+def get_project_file_path(instance, filename):
+    return get_file_path(instance, filename, "project")
+
+
 class Membership(models.Model):
     # This model stores all project memberships. Also
     # stores invitations to memberships that does not have
@@ -256,6 +260,33 @@ class Project(ProjectDefaults, TaggedMixin, TagsColorsMixin, models.Model):
                                                            verbose_name=_("activity last year"),
                                                            db_index=True)
 
+    default_gamification_points = models.IntegerField(null=False, blank=False, default=100,
+                                                      verbose_name=_("default gamification points"))
+
+    burnup_image = models.FileField(upload_to=get_project_file_path,
+                                    max_length=500, null=True, blank=True,
+                                    verbose_name=_("burnup image"))
+
+    cfd_image = models.FileField(upload_to=get_project_file_path,
+                                 max_length=500, null=True, blank=True,
+                                 verbose_name=_("cfd image"))
+
+    velocity_image = models.FileField(upload_to=get_project_file_path,
+                                      max_length=500, null=True, blank=True,
+                                      verbose_name=_("velocity image"))
+
+    us_dependencies_image = models.FileField(upload_to=get_project_file_path,
+                                             max_length=500, null=True, blank=True,
+                                             verbose_name=_("US dependencies image"))
+
+    burndown_forecast_image = models.FileField(upload_to=get_project_file_path,
+                                               max_length=500, null=True, blank=True,
+                                               verbose_name=_("burndown forecast image"))
+
+    burnup_forecast_image = models.FileField(upload_to=get_project_file_path,
+                                             max_length=500, null=True, blank=True,
+                                             verbose_name=_("burnup forecast image"))
+
     _importing = None
 
     class Meta:
@@ -271,6 +302,9 @@ class Project(ProjectDefaults, TaggedMixin, TagsColorsMixin, models.Model):
 
     def __repr__(self):
         return "<Project {0}>".format(self.id)
+
+    def get_slug(self):
+        return self.slug
 
     def save(self, *args, **kwargs):
         if not self._importing or not self.modified_date:
@@ -374,7 +408,7 @@ class Project(ProjectDefaults, TaggedMixin, TagsColorsMixin, models.Model):
     @cached_property
     def cached_memberships(self):
         return {m.user.id: m for m in self.memberships.exclude(user__isnull=True)
-                                                      .select_related("user", "project", "role")}
+            .select_related("user", "project", "role")}
 
     def cached_memberships_for_user(self, user):
         return self.cached_memberships.get(user.id, None)
@@ -386,7 +420,7 @@ class Project(ProjectDefaults, TaggedMixin, TagsColorsMixin, models.Model):
         user_model = get_user_model()
         members = self.memberships.all()
         if with_admin_privileges is not None:
-            members = members.filter(Q(is_admin=True)|Q(user__id=self.owner.id))
+            members = members.filter(Q(is_admin=True) | Q(user__id=self.owner.id))
         members = members.values_list("user", flat=True)
         return user_model.objects.filter(id__in=list(members))
 
@@ -471,7 +505,7 @@ class Project(ProjectDefaults, TaggedMixin, TagsColorsMixin, models.Model):
         from taiga.events.apps import (connect_events_signals,
                                        disconnect_events_signals)
         from taiga.projects.epics.apps import (connect_all_epics_signals,
-                                             disconnect_all_epics_signals)
+                                               disconnect_all_epics_signals)
         from taiga.projects.tasks.apps import (connect_all_tasks_signals,
                                                disconnect_all_tasks_signals)
         from taiga.projects.userstories.apps import (connect_all_userstories_signals,

@@ -17,6 +17,10 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+from django.apps import apps
+from taiga.projects.milestones.utils import attach_closed_points
+from django.db.models import Prefetch
+
 
 def attach_members(queryset, as_field="members_attr"):
     """Attach a json members representation to each object of the queryset.
@@ -68,6 +72,7 @@ def attach_milestones(queryset, as_field="milestones_attr"):
                         SELECT milestones_milestone.id,
                                milestones_milestone.slug,
                                milestones_milestone.name,
+                               milestones_milestone.finish_date,
                                milestones_milestone.closed
                           FROM milestones_milestone
                          WHERE milestones_milestone.project_id = {tbl}.id
@@ -525,6 +530,10 @@ def attach_public_projects_same_owner(queryset, user, as_field="public_projects_
 
 
 def attach_extra_info(queryset, user=None):
+    Sprint = apps.get_model("milestones", "Milestone")
+    sprints_queryset = Sprint.objects.select_related("project")
+    sprints_queryset = attach_closed_points(sprints_queryset)
+    queryset = queryset.prefetch_related(Prefetch("milestones", queryset=sprints_queryset))
     queryset = attach_members(queryset)
     queryset = attach_closed_milestones(queryset)
     queryset = attach_notify_policies(queryset)

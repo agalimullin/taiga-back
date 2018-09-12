@@ -15,13 +15,17 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+import datetime
+import random
 
 from django.utils.translation import ugettext as _
 
+from settings import MEDIA_ROOT
 from taiga.base.api import serializers
 from taiga.base.fields import Field, MethodField, I18NField
 
 from taiga.permissions import services as permissions_services
+from taiga.users.models import User
 from taiga.users.services import get_photo_url, get_user_photo_url
 from taiga.users.gravatar import get_gravatar_id, get_user_gravatar_id
 from taiga.users.serializers import UserBasicInfoSerializer
@@ -31,7 +35,6 @@ from taiga.permissions.services import is_project_admin, is_project_owner
 
 from . import services
 from .notifications.choices import NotifyLevel
-
 
 ######################################################
 # Custom values for selectors
@@ -157,6 +160,16 @@ class MembershipSerializer(serializers.LightSerializer):
     project_slug = MethodField()
     invited_by = UserBasicInfoSerializer()
     is_owner = MethodField()
+    gamification_points = MethodField()
+
+    def get_gamification_points(self, obj):
+        if getattr(obj, 'user_id') is not None:
+            current_user = User.objects.get(pk=getattr(obj, 'user_id'))
+            project_id = str(getattr(obj.project, 'id'))
+            points = getattr(current_user, 'projects_activity')[project_id]['points']
+            return points
+        else:
+            return None
 
     def get_role_name(self, obj):
         return obj.role.name if obj.role else None
@@ -268,6 +281,40 @@ class ProjectSerializer(serializers.LightSerializer):
 
     is_fan = Field(attr="is_fan_attr")
 
+    work_done_percentage = MethodField(attr="work_done_percentage_attr")
+    past_time_percentage = MethodField(attr="past_time_percentage_attr")
+    default_gamification_points = Field()
+
+    burnup_image = MethodField()
+    cfd_image = MethodField()
+    velocity_image = MethodField()
+    us_dependencies_image = MethodField()
+    burndown_forecast_image = MethodField()
+    burnup_forecast_image = MethodField()
+
+
+    def get_work_done_percentage(self, obj):
+        closed_points = 0
+        for milestone in obj.milestones.all():
+            closed_points += sum(milestone.closed_points.values())
+        if getattr(obj, 'total_story_points') == 0:
+            return 0
+        else:
+            return round(closed_points / getattr(obj, 'total_story_points') * 100)
+
+    def get_past_time_percentage(self, obj):
+        milestones = obj.milestones.all()
+        if len(milestones) != 0:
+            start_date = getattr(milestones[0], 'estimated_start')
+            last_sprint_finish_date = getattr(milestones[len(milestones) - 1], 'estimated_finish')
+            percentage = (datetime.date.today() - start_date).days / (last_sprint_finish_date - start_date).days * 100
+            if percentage > 100:
+                return 100
+            else:
+                return round(percentage)
+        else:
+            return 0
+
     def get_members(self, obj):
         assert hasattr(obj, "members_attr"), "instance must have a members_attr attribute"
         if obj.members_attr is None:
@@ -352,6 +399,24 @@ class ProjectSerializer(serializers.LightSerializer):
     def get_logo_big_url(self, obj):
         return services.get_logo_big_thumbnail_url(obj)
 
+    def get_burnup_image(self, obj):
+        return services.get_burnup_image_url(obj)
+
+    def get_cfd_image(self, obj):
+        return services.get_cfd_image_url(obj)
+
+    def get_velocity_image(self, obj):
+        return services.get_velocity_image_url(obj)
+
+    def get_us_dependencies_image(self, obj):
+        return services.get_us_dependencies_image_url(obj)
+
+    def get_burndown_forecast_image(self, obj):
+        return services.get_burndown_forecast_image_url(obj)
+
+    def get_burnup_forecast_image(self, obj):
+        return services.get_burnup_forecast_image_url(obj)
+
 
 class ProjectDetailSerializer(ProjectSerializer):
     epic_statuses = Field(attr="epic_statuses_attr")
@@ -385,7 +450,6 @@ class ProjectDetailSerializer(ProjectSerializer):
         assert hasattr(obj, "milestones_attr"), "instance must have a milestones_attr attribute"
         if obj.milestones_attr is None:
             return []
-
         return obj.milestones_attr
 
     def to_value(self, instance):

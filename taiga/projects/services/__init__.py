@@ -37,6 +37,12 @@ from .invitations import find_invited_user
 
 from .logo import get_logo_small_thumbnail_url
 from .logo import get_logo_big_thumbnail_url
+from .charts import get_burnup_image_url
+from .charts import get_cfd_image_url
+from .charts import get_velocity_image_url
+from .charts import get_us_dependencies_image_url
+from .charts import get_burndown_forecast_image_url
+from .charts import get_burnup_forecast_image_url
 
 from .members import create_members_in_bulk
 from .members import get_members_from_bulk

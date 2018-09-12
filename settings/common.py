@@ -57,7 +57,7 @@ IGNORABLE_404_ENDS = (".php", ".cgi")
 IGNORABLE_404_STARTS = ("/phpmyadmin/",)
 
 ATOMIC_REQUESTS = True
-TIME_ZONE = "UTC"
+TIME_ZONE = 'Europe/Moscow'
 LOGIN_URL="/auth/login/"
 USE_TZ = True
 
@@ -95,7 +95,7 @@ LANGUAGES = [
     #("es-ve", "Español (Venezuela)"),  # Venezuelan Spanish
     #("et", "Eesti"),  # Estonian
     #("eu", "Euskara"),  # Basque
-    #("fa", "فارسی‏"),  # Persian
+    ("fa", "فارسی‏"),  # Persian
     ("fi", "Suomi"),  # Finnish
     ("fr", "Français"),  # French
     #("fy", "Frysk"),  # Frisian
@@ -204,6 +204,7 @@ STATIC_ROOT = os.path.join(BASE_DIR, "static")
 STATICFILES_FINDERS = [
     "django.contrib.staticfiles.finders.FileSystemFinder",
     "django.contrib.staticfiles.finders.AppDirectoriesFinder",
+    "django.contrib.staticfiles.finders.DefaultStorageFinder"
 ]
 
 STATICFILES_DIRS = (
@@ -211,8 +212,10 @@ STATICFILES_DIRS = (
     # Don't forget to use absolute paths, not relative paths.
 )
 
-# Defautl storage
+# Default storage
 DEFAULT_FILE_STORAGE = "taiga.base.storage.FileSystemStorage"
+
+FILE_UPLOAD_PERMISSIONS = 0o644
 
 SECRET_KEY = "aw3+t2r(8(0kkrhg8)gx6i96v5^kv%6cfep9wxfom0%7dy0m9e"
 
@@ -319,13 +322,13 @@ INSTALLED_APPS = [
     "taiga.hooks.gogs",
     "taiga.webhooks",
     "taiga.importers",
-
     "djmail",
     "django_jinja",
     "django_jinja.contrib._humanize",
     "sr",
     "easy_thumbnails",
     "raven.contrib.django.raven_compat",
+    "django_extensions",
 ]
 
 WSGI_APPLICATION = "taiga.wsgi.application"

@@ -58,6 +58,12 @@ class MilestoneViewSet(HistoryResourceMixin, WatchedResourceMixin,
         "project__slug",
         "closed"
     )
+    order_by_fields = ("project",
+                       "name",
+                       "estimated_start",
+                       "estimated_finish",
+                       "closed",
+                       "created_date")
     queryset = models.Milestone.objects.all()
 
     def create(self, request, *args, **kwargs):
@@ -133,7 +139,16 @@ class MilestoneViewSet(HistoryResourceMixin, WatchedResourceMixin,
             })
             current_date = current_date + datetime.timedelta(days=1)
             optimal_points -= optimal_points_per_day
-
+        # x = []
+        # y = []
+        # optimal = []
+        # for day in milestone_stats['days']:
+        #     x.append(day['day'])
+        #     y.append(day['open_points'])
+        #     optimal.append(day['optimal_points'])
+        # print('x = numpy.array(' + str(x) + ')')
+        # print('y = numpy.array(' + str(y) + ')')
+        # print('optimal = numpy.array(' + str(optimal) + ')')
         return response.Ok(milestone_stats)
 
 

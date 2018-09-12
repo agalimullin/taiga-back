@@ -20,10 +20,10 @@ from django.views.decorators.cache import cache_page
 
 from taiga.base import response
 from taiga.base.api import viewsets
+from taiga.base.utils import json
 
 from . import permissions
 from . import services
-
 
 CACHE_TIMEOUT = getattr(settings, "STATS_CACHE_TIMEOUT", 0)
 
@@ -55,3 +55,12 @@ class DiscoverStatsViewSet(BaseStatsViewSet):
         stats = OrderedDict()
         stats["projects"] = services.get_projects_discover_stats(user=request.user)
         return response.Ok(stats)
+
+
+class AgileStatsExportViewSet(BaseStatsViewSet):
+    permission_classes = (permissions.StatsExportPermission,)
+
+    def create(self, request, *args, **kwargs):
+        if request.method == 'POST':
+            project_id = json.loads(request.body.decode("utf-8"))['project_id']
+            return services.export_project_stats_by_date_xls(request, project_id)

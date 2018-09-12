@@ -132,14 +132,28 @@ class ProjectViewSet(LikedResourceMixin, HistoryResourceMixin,
             qs = qs.filter(totals_updated_datetime__gte=now - relativedelta(months=1))
         elif order_by_field_name == "total_activity_last_year":
             qs = qs.filter(totals_updated_datetime__gte=now - relativedelta(years=1))
-
         return qs
 
     def retrieve(self, request, *args, **kwargs):
+        qs = self.get_queryset()
         if self.action == "by_slug":
             self.lookup_field = "slug"
+            # If we retrieve the project by slug we want to filter by user the
+            # permissions and return 404 in case the user don't have access
+            flt = filters.get_filter_expression_can_view_projects(
+                self.request.user)
 
-        return super().retrieve(request, *args, **kwargs)
+            qs = qs.filter(flt)
+
+        self.object = get_object_or_404(qs, **kwargs)
+
+        self.check_permissions(request, 'retrieve', self.object)
+
+        if self.object is None:
+            raise Http404
+
+        serializer = self.get_serializer(self.object)
+        return response.Ok(serializer.data)
 
     def get_serializer_class(self):
         if self.action == "list":
@@ -778,6 +792,38 @@ class MembershipViewSet(BlockedByProjectMixin, ModelCrudViewSet):
         self.pre_conditions_on_save(invitation)
 
         services.send_invitation(invitation=invitation)
+        return response.NoContent()
+
+    @list_route(methods=["POST"])
+    def remove_user_from_all_my_projects(self, request, **kwargs):
+        private_only = request.DATA.get('private_only', False)
+
+        user_id = request.DATA.get('user', None)
+        if user_id is None:
+            raise exc.WrongArguments(_("Invalid user id"))
+
+        user_model = apps.get_model("users", "User")
+        try:
+            user = user_model.objects.get(id=user_id)
+        except user_model.DoesNotExist:
+            return response.BadRequest(_("The user doesn't exist"))
+
+        memberships = models.Membership.objects.filter(project__owner=request.user, user=user)
+        if private_only:
+            memberships = memberships.filter(project__is_private=True)
+
+        errors = []
+        for membership in memberships:
+            if not services.can_user_leave_project(user, membership.project):
+                errors.append(membership.project.name)
+
+        if len(errors) > 0:
+            error = _("This user can't be removed from the following projects, because would "
+                      "leave them without any active admin: {}.".format(", ".join(errors)))
+            return response.BadRequest(error)
+
+        memberships.delete()
+
         return response.NoContent()
 
     def pre_delete(self, obj):
