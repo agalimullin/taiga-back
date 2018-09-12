@@ -23,3 +23,7 @@ class SystemStatsPermission(permissions.TaigaResourcePermission):
 
 class DiscoverStatsPermission(permissions.TaigaResourcePermission):
     global_perms = permissions.AllowAny()
+
+
+class StatsExportPermission(permissions.TaigaResourcePermission):
+    project_admin_perms = permissions.IsProjectAdmin

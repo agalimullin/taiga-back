@@ -24,12 +24,17 @@ from django.utils import timezone
 from django.core.exceptions import ValidationError
 from django.utils.functional import cached_property
 
+from taiga.base.utils.files import get_file_path
 from taiga.base.utils.slug import slugify_uniquely
 from taiga.base.utils.dicts import dict_sum
 from taiga.projects.notifications.mixins import WatchedModelMixin
 
 import itertools
 import datetime
+
+
+def get_milestone_file_path(instance, filename):
+    return get_file_path(instance, filename, "milestone")
 
 
 class Milestone(WatchedModelMixin, models.Model):
@@ -57,6 +62,9 @@ class Milestone(WatchedModelMixin, models.Model):
                                       verbose_name=_("disponibility"))
     order = models.PositiveSmallIntegerField(default=1, null=False, blank=False,
                                              verbose_name=_("order"))
+    burndown_forecast_image = models.FileField(upload_to=get_milestone_file_path,
+                                               max_length=500, null=True, blank=True,
+                                               verbose_name=_("burndown forecast image"))
     _importing = None
     _total_closed_points_by_date = None
 

@@ -39,3 +39,9 @@ def open_milestone(milestone):
     if milestone.closed:
         milestone.closed = False
         milestone.save(update_fields=["closed",])
+
+
+def get_burndown_forecast_image_url(milestone):
+    if milestone.burndown_forecast_image and milestone.burndown_forecast_image.url:
+        return milestone.burndown_forecast_image.url
+    return None

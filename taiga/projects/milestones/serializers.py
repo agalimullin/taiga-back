@@ -21,6 +21,7 @@ from taiga.base.fields import Field, MethodField
 from taiga.projects.notifications.mixins import WatchedResourceSerializer
 from taiga.projects.userstories.serializers import UserStoryListSerializer
 from taiga.projects.mixins.serializers import ProjectExtraInfoSerializerMixin
+from .services import get_burndown_forecast_image_url
 
 
 class MilestoneSerializer(WatchedResourceSerializer,
@@ -43,6 +44,7 @@ class MilestoneSerializer(WatchedResourceSerializer,
     user_stories = MethodField()
     total_points = MethodField()
     closed_points = MethodField()
+    burndown_forecast_image = MethodField()
 
     def get_user_stories(self, obj):
         return UserStoryListSerializer(obj.user_stories.all(), many=True).data
@@ -54,3 +56,6 @@ class MilestoneSerializer(WatchedResourceSerializer,
     def get_closed_points(self, obj):
         assert hasattr(obj, "closed_points_attr"), "instance must have a closed_points_attr attribute"
         return obj.closed_points_attr
+
+    def get_burndown_forecast_image(self, obj):
+        return get_burndown_forecast_image_url(obj)

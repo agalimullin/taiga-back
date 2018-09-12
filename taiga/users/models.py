@@ -187,6 +187,7 @@ class User(AbstractBaseUser, PermissionsMixin):
                                                           default=settings.MAX_MEMBERSHIPS_PUBLIC_PROJECTS,
                                                           verbose_name=_("max number of memberships for "
                                                                          "each owned public project"))
+    projects_activity = JSONField(null=True, blank=True, default=None)
 
     _cached_memberships = None
     _cached_liked_ids = None

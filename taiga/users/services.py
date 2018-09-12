@@ -165,6 +165,7 @@ def get_stats_for_user(from_user, by_user):
         'roles': roles,
         'total_num_contacts': total_num_contacts,
         'total_num_closed_userstories': total_num_closed_userstories,
+        'projects_activity': getattr(from_user, 'projects_activity')
     }
     return project_stats
 

@@ -153,6 +153,7 @@ def _get_milestones_stats_for_backlog(project, milestones):
 
     The returned result is a list of dicts where each entry contains the following keys:
         - name
+        - id
         - optimal
         - evolution
         - team
@@ -187,6 +188,7 @@ def _get_milestones_stats_for_backlog(project, milestones):
         if current_milestone_pos < milestones_count:
             current_milestone = list(milestones.values())[current_milestone_pos]
             milestone_name = current_milestone.name
+            milestone_id = current_milestone.id
             team_increment = current_team_increment
             client_increment = current_client_increment
             current_evolution += current_milestone._closed_points
@@ -195,6 +197,7 @@ def _get_milestones_stats_for_backlog(project, milestones):
 
         else:
             milestone_name = _("Future sprint")
+            milestone_id = None
             current_team_increment += project._future_team_increment
             current_client_increment += project._future_client_increment
             team_increment = current_team_increment
@@ -203,6 +206,7 @@ def _get_milestones_stats_for_backlog(project, milestones):
 
         milestones_stats.append({
             'name': milestone_name,
+            'id': milestone_id,
             'optimal': optimal_points,
             'evolution': evolution,
             'team-increment': team_increment,
@@ -215,6 +219,7 @@ def _get_milestones_stats_for_backlog(project, milestones):
 
     milestones_stats.append({
         'name': _('Project End'),
+        'id': None,
         'optimal': optimal_points,
         'evolution': evolution,
         'team-increment': current_team_increment,

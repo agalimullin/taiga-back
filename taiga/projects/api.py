@@ -132,7 +132,6 @@ class ProjectViewSet(LikedResourceMixin, HistoryResourceMixin,
             qs = qs.filter(totals_updated_datetime__gte=now - relativedelta(months=1))
         elif order_by_field_name == "total_activity_last_year":
             qs = qs.filter(totals_updated_datetime__gte=now - relativedelta(years=1))
-        print(qs)
         return qs
 
     def retrieve(self, request, *args, **kwargs):

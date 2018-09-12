@@ -62,7 +62,8 @@ class TimelineSerializer(serializers.LightSerializer):
                 "gravatar_id": get_user_gravatar_id(user),
                 "username": user.username,
                 "is_profile_visible": user.is_active and not user.is_system,
-                "date_joined": user.date_joined
+                "date_joined": user.date_joined,
+                "projects_activity": user.projects_activity
             }
 
         return obj.data

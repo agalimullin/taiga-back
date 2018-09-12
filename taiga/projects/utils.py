@@ -529,49 +529,11 @@ def attach_public_projects_same_owner(queryset, user, as_field="public_projects_
     return queryset
 
 
-def attach_lalala(queryset, as_field="lalala_attr"):
-    pass
-    # Sprint = apps.get_model("milestones", "Milestone")
-    # sprints_queryset = Sprint.objects.select_related("project")
-    # sprints_queryset = attach_closed_points(sprints_queryset)
-    # print(sprints_queryset)
-    # queryset = queryset.prefetch_related(Prefetch("milestones", queryset=sprints_queryset))
-
-    # print(sprints_queryset)
-    # sql = """
-    #                  SELECT json_agg(
-    #                             row_to_json(milestones_milestone)
-    #                             ORDER BY milestones_milestone.created_date
-    #                         )
-    #                    FROM milestones_milestone
-    #                    INNER JOIN userstories_userstory ON userstories_userstory.id = userstories_rolepoints.user_story_id
-    #                    INNER JOIN projects_points ON userstories_rolepoints.points_id = projects_points.id
-    #                    WHERE milestones_milestone.project_id = {tbl}.id
-    #               """
-    # sql = sql.format(tbl=model._meta.db_table)
-    # queryset = queryset.extra(select={as_field: sql})
-    # sql = """
-    #               SELECT json_agg(
-    # #                 row_to_json(userstories_rolepoints)
-    # #             )
-    #               FROM userstories_rolepoints
-    #               INNER JOIN userstories_userstory ON userstories_userstory.id = userstories_rolepoints.user_story_id
-    #               INNER JOIN projects_points ON userstories_rolepoints.points_id = projects_points.id
-    #               WHERE userstories_userstory.is_closed=True
-    #         """
-    # sql = sql.format(tbl=model._meta.db_table)
-    # queryset = queryset.extra(select={as_field: sql})
-    return queryset
-
-
 def attach_extra_info(queryset, user=None):
     Sprint = apps.get_model("milestones", "Milestone")
     sprints_queryset = Sprint.objects.select_related("project")
     sprints_queryset = attach_closed_points(sprints_queryset)
-    # for elem in sprints_queryset:
-    #     print(vars(elem))
     queryset = queryset.prefetch_related(Prefetch("milestones", queryset=sprints_queryset))
-
     queryset = attach_members(queryset)
     queryset = attach_closed_milestones(queryset)
     queryset = attach_notify_policies(queryset)
@@ -593,6 +555,5 @@ def attach_extra_info(queryset, user=None):
     queryset = attach_private_projects_same_owner(queryset, user)
     queryset = attach_public_projects_same_owner(queryset, user)
     queryset = attach_milestones(queryset)
-    queryset = attach_lalala(queryset)
 
     return queryset

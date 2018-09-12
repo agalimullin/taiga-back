@@ -26,8 +26,7 @@ import datetime
 class BurnupChart(models.Model):
     project = models.ForeignKey("projects.Project", null=False, blank=False,
                                 related_name="burnup_chart_stats", verbose_name=_("project"))
-    total_points = JSONField(null=False, blank=False, verbose_name=_("total points"))
-    completed_points = JSONField(null=False, blank=False, verbose_name=_("completed points"))
+    data = JSONField(null=False, blank=False, verbose_name=_("data"))
     created_date = models.DateField(null=False, blank=False,
                                     verbose_name=_("created date"),
                                     default=datetime.date.today)
@@ -42,14 +41,6 @@ class CumulativeFlowDiagram(models.Model):
     project = models.ForeignKey("projects.Project", null=False, blank=False,
                                 related_name="cumulative_flow_diagram_stats", verbose_name=_("project"))
     data = JSONField(null=False, blank=False, verbose_name=_("data"))
-    # dates = JSONField(null=False, blank=False, verbose_name=_("dates"))
-    # annotations = JSONField(null=False, blank=False, verbose_name=_("annotations"))
-    # all_archieved = JSONField(null=False, blank=False, verbose_name=_("all archieved"))
-    # all_done = JSONField(null=False, blank=False, verbose_name=_("all done"))
-    # all_ready_for_test = JSONField(null=False, blank=False, verbose_name=_("all ready for test"))
-    # all_in_progress = JSONField(null=False, blank=False, verbose_name=_("all in progress"))
-    # all_ready = JSONField(null=False, blank=False, verbose_name=_("all ready"))
-    # all_new = JSONField(null=False, blank=False, verbose_name=_("all new"))
     created_date = models.DateField(null=False, blank=False,
                                     verbose_name=_("created date"),
                                     default=datetime.date.today)
