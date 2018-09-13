@@ -572,7 +572,7 @@ DOT_HEADER_FMT = """digraph {{
 """
 
 
-# функция генерации графика взаимозависимостей между требованиями заказчика проекта
+# генерация данных для построения графика US dependencies
 def us_dependencies_gen(project):
     status_ids = None
 
@@ -653,7 +653,7 @@ def us_dependencies_gen(project):
         return 1
 
 
-# генерация графика взаимозависимостей и форматирование в нем узлов между требованиями заказчика
+# функция генерации графика взаимозависимостей между требованиями заказчика проекта
 def draw_us_dependencies(project):
     dot_path = os.path.abspath(os.path.dirname(__file__)) + '/us_dependencies_dot_files/project_' + str(
         getattr(project, 'id')) + '.dot'
