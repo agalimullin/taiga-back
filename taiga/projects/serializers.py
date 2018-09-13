@@ -166,8 +166,10 @@ class MembershipSerializer(serializers.LightSerializer):
         if getattr(obj, 'user_id') is not None:
             current_user = User.objects.get(pk=getattr(obj, 'user_id'))
             project_id = str(getattr(obj.project, 'id'))
-            points = getattr(current_user, 'projects_activity')[project_id]['points']
-            return points
+            if getattr(current_user, 'projects_activity'):
+                points = getattr(current_user, 'projects_activity')[project_id]['points']
+                return points
+            return None
         else:
             return None
 
